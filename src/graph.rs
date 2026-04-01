@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 pub type NodeId = usize;
 
@@ -55,6 +55,28 @@ impl DepGraph {
             }
         }
         None
+    }
+
+    pub fn topo_sort(&self) -> Option<Vec<NodeId>> {
+        let n = self.names.len();
+        let mut indeg = vec![0usize; n];
+        for u in 0..n {
+            for &v in &self.edges[u] {
+                indeg[v] += 1;
+            }
+        }
+        let mut queue: VecDeque<NodeId> = (0..n).filter(|&i| indeg[i] == 0).collect();
+        let mut order = Vec::with_capacity(n);
+        while let Some(u) = queue.pop_front() {
+            order.push(u);
+            for &v in &self.edges[u] {
+                indeg[v] -= 1;
+                if indeg[v] == 0 {
+                    queue.push_back(v);
+                }
+            }
+        }
+        if order.len() == n { Some(order) } else { None }
     }
 
     fn dfs_cycle(&self, u: NodeId, color: &mut [u8], path: &mut Vec<NodeId>) -> Option<Vec<NodeId>> {
@@ -123,5 +145,48 @@ mod tests {
         g.add_edge(a, b);
         g.add_edge(b, c);
         assert!(g.find_cycle().is_none());
+    }
+
+    #[test]
+    fn topo_sort_linear() {
+        let mut g = DepGraph::new();
+        let a = g.add_node("a");
+        let b = g.add_node("b");
+        let c = g.add_node("c");
+        g.add_edge(a, b);
+        g.add_edge(b, c);
+        let order = g.topo_sort().unwrap();
+        let pos: HashMap<_, _> = order.iter().enumerate().map(|(i, &v)| (v, i)).collect();
+        assert!(pos[&a] < pos[&b]);
+        assert!(pos[&b] < pos[&c]);
+    }
+
+    #[test]
+    fn topo_sort_diamond() {
+        let mut g = DepGraph::new();
+        let a = g.add_node("a");
+        let b = g.add_node("b");
+        let c = g.add_node("c");
+        let d = g.add_node("d");
+        g.add_edge(a, b);
+        g.add_edge(a, c);
+        g.add_edge(b, d);
+        g.add_edge(c, d);
+        let order = g.topo_sort().unwrap();
+        let pos: HashMap<_, _> = order.iter().enumerate().map(|(i, &v)| (v, i)).collect();
+        assert!(pos[&a] < pos[&b]);
+        assert!(pos[&a] < pos[&c]);
+        assert!(pos[&b] < pos[&d]);
+        assert!(pos[&c] < pos[&d]);
+    }
+
+    #[test]
+    fn topo_sort_returns_none_on_cycle() {
+        let mut g = DepGraph::new();
+        let a = g.add_node("a");
+        let b = g.add_node("b");
+        g.add_edge(a, b);
+        g.add_edge(b, a);
+        assert!(g.topo_sort().is_none());
     }
 }
