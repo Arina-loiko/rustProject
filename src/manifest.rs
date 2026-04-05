@@ -1,8 +1,9 @@
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::error::Error;
 use std::fs;
 use std::path::Path;
+
+use crate::error::ResolverError;
 
 #[derive(Debug, Deserialize)]
 pub struct Manifest {
@@ -18,7 +19,7 @@ pub struct Package {
 }
 
 impl Manifest {
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, ResolverError> {
         let text = fs::read_to_string(path)?;
         let m: Manifest = toml::from_str(&text)?;
         Ok(m)

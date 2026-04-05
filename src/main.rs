@@ -1,3 +1,4 @@
+mod error;
 mod graph;
 mod manifest;
 mod registry;

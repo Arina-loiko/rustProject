@@ -1,8 +1,9 @@
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::error::Error;
 use std::fs;
 use std::path::Path;
+
+use crate::error::ResolverError;
 
 #[derive(Debug, Deserialize, Default)]
 pub struct PackageInfo {
@@ -17,7 +18,7 @@ pub struct Registry {
 }
 
 impl Registry {
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, ResolverError> {
         let text = fs::read_to_string(path)?;
         let r: Registry = serde_json::from_str(&text)?;
         Ok(r)
