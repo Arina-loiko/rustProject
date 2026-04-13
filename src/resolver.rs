@@ -25,22 +25,29 @@ pub fn resolve(manifest: &Manifest, registry: &Registry) -> Result<Vec<ResolvedP
     }
 
     while let Some((name, version, parent)) = stack.pop() {
-        let key = format!("{}@{}", name, version);
-        let already = chosen.get(&name).is_some();
-        if !already {
-            let info = registry.get(&name, &version).ok_or_else(|| ResolverError::PackageNotFound {
-                name: name.clone(),
-                version: version.clone(),
-            })?;
-            let id = graph.add_node(&key);
-            graph.add_edge(id, parent);
-            chosen.insert(name.clone(), version.clone());
-            for (d, v) in &info.dependencies {
-                stack.push((d.clone(), v.clone(), id));
+        if let Some(existing) = chosen.get(&name) {
+            if existing != &version {
+                return Err(ResolverError::VersionConflict {
+                    name: name.clone(),
+                    wanted: version.clone(),
+                    existing: existing.clone(),
+                });
             }
-        } else {
+            let key = format!("{}@{}", name, version);
             let id = graph.add_node(&key);
             graph.add_edge(id, parent);
+            continue;
+        }
+        let info = registry.get(&name, &version).ok_or_else(|| ResolverError::PackageNotFound {
+            name: name.clone(),
+            version: version.clone(),
+        })?;
+        let key = format!("{}@{}", name, version);
+        let id = graph.add_node(&key);
+        graph.add_edge(id, parent);
+        chosen.insert(name.clone(), version.clone());
+        for (d, v) in &info.dependencies {
+            stack.push((d.clone(), v.clone(), id));
         }
     }
 
@@ -116,6 +123,19 @@ mod tests {
         let pos = |n: &str| names.iter().position(|x| *x == n).unwrap();
         assert!(pos("serde_derive") < pos("serde"));
         assert!(pos("serde") < pos("app"));
+    }
+
+    #[test]
+    fn version_conflict_detected() {
+        let r = reg(&[
+            ("a", "1.0.0", pkg(&[("c", "1.0.0")])),
+            ("b", "1.0.0", pkg(&[("c", "2.0.0")])),
+            ("c", "1.0.0", pkg(&[])),
+            ("c", "2.0.0", pkg(&[])),
+        ]);
+        let m = manifest(&[("a", "1.0.0"), ("b", "1.0.0")]);
+        let err = resolve(&m, &r).unwrap_err();
+        assert!(matches!(err, ResolverError::VersionConflict { .. }));
     }
 
     #[test]
