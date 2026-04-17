@@ -35,12 +35,9 @@ impl DepGraph {
         &self.names[id]
     }
 
+    #[cfg(test)]
     pub fn len(&self) -> usize {
         self.names.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.names.is_empty()
     }
 
     pub fn find_cycle(&self) -> Option<Vec<String>> {
