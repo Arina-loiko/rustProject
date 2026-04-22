@@ -1,0 +1,11 @@
+{
+  "serde": {
+    "1.0.0": { "dependencies": { "serde_derive": "1.0.0" } }
+  },
+  "serde_derive": {
+    "1.0.0": { "dependencies": {} }
+  },
+  "tokio": {
+    "1.2.0": { "dependencies": { "serde": "1.0.0" } }
+  }
+}
